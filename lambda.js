@@ -87,7 +87,8 @@ module.exports.handler = async () => {
 				debug('Sending message...');
 				await bot.sendMessage(
 					CHANNEL_ID,
-					'No appointments are available.'
+					'No appointments are available.',
+					{ disable_notification: true }
 				);
 			}
 		}
@@ -97,7 +98,8 @@ module.exports.handler = async () => {
 		if (shouldUpdate()) {
 			await bot.sendMessage(
 				CHANNEL_ID,
-				'The appointment scheduling website is unavailable right now.'
+				'The appointment scheduling website is unavailable right now.',
+				{ disable_notification: true }
 			);
 		}
 	} finally {

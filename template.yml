@@ -24,6 +24,7 @@ Resources:
           CHANNEL_ID: !Ref ChannelId
           DYNAMODB_TABLE: !Ref Table
           DEBUG: lambda
+          DEBUG_HIDE_DATE: true
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref Table
