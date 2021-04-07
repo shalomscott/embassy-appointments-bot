@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Jerusalem Embassy Appointments Telegram SAM template
+
+Parameters:
+  BotToken:
+    Description: "Telegram bot token"
+    Type: "String"
+  ChannelId:
+    Description: "ID of the channel to post to"
+    Type: "String"
+
+Resources:
+  Lambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda.handler
+      Runtime: nodejs12.x
+      Timeout: 30
+      Environment:
+        Variables:
+          BOT_TOKEN: !Ref BotToken
+          CHANNEL_ID: !Ref ChannelId
+          DYNAMODB_TABLE: !Ref Table
+          DEBUG: lambda
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Table
+      Events:
+        Trigger:
+          Type: Schedule
+          Properties:
+            Schedule: "rate(5 minutes)"
+  Table:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: InstanceId # We only need one record per lambda instance (1 total)
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
