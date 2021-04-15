@@ -56,14 +56,11 @@ module.exports.handler = async () => {
 			debug(`Checking at ${embassy} branch...`);
 
 			for (let i = 0; i < 4; ++i) {
-				const monthName = MONTHS[month + i];
+				const m = (month + i) % 12;
+				const y = year + Math.floor((month + i) / 12);
+				const monthName = MONTHS[m];
 
-				// I know there's a bug here when the year changes next month. I'm okay with it for now.
-				const monthHtml = await getMonthHtml(
-					month + i,
-					year,
-					embassyCode
-				);
+				const monthHtml = await getMonthHtml(m, y, embassyCode);
 				if (parser.isMonthAvailable(monthHtml)) {
 					debug(
 						`Appointments available at ${embassy} in ${monthName}`
