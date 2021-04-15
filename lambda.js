@@ -61,7 +61,9 @@ module.exports.handler = async () => {
 				const y = year + Math.floor((month + i) / 12);
 				const monthName = MONTHS[m];
 
+				debug(`Requesting HTML for ${monthName}`);
 				const monthHtml = await getMonthHtml(m, y, embassyCode);
+
 				const { available, bookable } = parser.parseMonth(monthHtml);
 				if (available) {
 					debug(
@@ -116,7 +118,6 @@ module.exports.handler = async () => {
 
 async function getMonthHtml(month, year, embassyCode) {
 	if (sessions[embassyCode]) {
-		debug('Using old session key');
 		try {
 			return await requestMonthHtml(
 				sessions[embassyCode],
