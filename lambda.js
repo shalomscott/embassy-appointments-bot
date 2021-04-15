@@ -8,7 +8,8 @@ const { getCache, updateCache } = require('./cache');
 
 const { BOT_TOKEN, CHANNEL_ID } = process.env;
 
-const MAX_SILENCE_PERIOD = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_SILENCE_PERIOD_HRS = 24;
+const MAX_SILENCE_PERIOD = MAX_SILENCE_PERIOD_HRS * 60 * 60 * 1000;
 
 const MONTHS = [
 	'January',
@@ -79,15 +80,15 @@ module.exports.handler = async () => {
 			await bot.sendMessage(CHANNEL_ID, formatMessage(availability), {
 				parse_mode: 'MarkdownV2',
 			});
-		} else {
-			if (shouldUpdate()) {
-				debug('Sending message...');
-				await bot.sendMessage(
-					CHANNEL_ID,
-					'No appointments are available.',
-					{ disable_notification: true }
-				);
-			}
+			updateLastMessageTime();
+		} else if (shouldUpdate()) {
+			debug('Sending message...');
+			await bot.sendMessage(
+				CHANNEL_ID,
+				`No appointments were available in the last ${MAX_SILENCE_PERIOD_HRS} hours.`,
+				{ disable_notification: true }
+			);
+			updateLastMessageTime();
 		}
 	} catch (statusText) {
 		debug(`Caught error: ${statusText}`);
@@ -98,6 +99,7 @@ module.exports.handler = async () => {
 				'The appointment scheduling website is unavailable right now.',
 				{ disable_notification: true }
 			);
+			updateLastMessageTime();
 		}
 	} finally {
 		await ensureCache();
@@ -168,9 +170,12 @@ function shouldUpdate() {
 	const now = Date.now();
 	if (now - lastMessageTime >= MAX_SILENCE_PERIOD) {
 		debug('Max silence period has elapsed');
-		lastMessageTime = now;
-		cacheStale = true;
 		return true;
 	}
 	return false;
+}
+
+function updateLastMessageTime() {
+	lastMessageTime = Date.now();
+	cacheStale = true;
 }
