@@ -62,7 +62,8 @@ module.exports.handler = async () => {
 				const monthName = MONTHS[m];
 
 				const monthHtml = await getMonthHtml(m, y, embassyCode);
-				if (parser.isMonthAvailable(monthHtml)) {
+				const { available, bookable } = parser.parseMonth(monthHtml);
+				if (available) {
 					debug(
 						`Appointments available at ${embassy} in ${monthName}`
 					);
@@ -71,6 +72,12 @@ module.exports.handler = async () => {
 						availability[embassyCode] = [];
 					}
 					availability[embassyCode].push(monthName);
+				}
+				if (!bookable) {
+					debug(
+						`No booking at ${embassy} in ${monthName}. Moving on...`
+					);
+					break;
 				}
 			}
 		}
