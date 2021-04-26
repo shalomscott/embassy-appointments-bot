@@ -43,15 +43,18 @@ const bot = new Slimbot(BOT_TOKEN);
 
 module.exports.handler = async () => {
 	try {
-		const availability = {};
-
 		const now = new Date();
 		const month = now.getMonth();
 		const year = now.getFullYear();
 
 		await retrieveCache();
 
+		let sentAvailableMessage = false;
+
 		for (const embassyCode in EMBASSIES) {
+			let sentMessageForEmbassy = null;
+			let sentMessageForEmbassyText = '';
+
 			const embassy = EMBASSIES[embassyCode];
 
 			debug(`Checking at ${embassy} branch...`);
@@ -70,28 +73,62 @@ module.exports.handler = async () => {
 						`Appointments available at ${embassy} in ${monthName}`
 					);
 
-					if (!availability[embassyCode]) {
-						availability[embassyCode] = [];
+					if (!sentAvailableMessage) {
+						await bot.sendMessage(
+							CHANNEL_ID,
+							'🚨 *Appointments available\\!* 🚨',
+							{
+								parse_mode: 'MarkdownV2',
+							}
+						);
+						sentAvailableMessage = true;
 					}
-					availability[embassyCode].push(monthName);
-				}
-				if (!bookable) {
+					if (!sentMessageForEmbassy) {
+						sentMessageForEmbassyText = `At the *${embassy} Branch* in _*${monthName}*_`;
+						sentMessageForEmbassy = await bot.sendMessage(
+							CHANNEL_ID,
+							sentMessageForEmbassyText,
+							{
+								parse_mode: 'MarkdownV2',
+								reply_markup: JSON.stringify({
+									inline_keyboard: [
+										[
+											{
+												text: `👉 Go to ${embassy} Branch`,
+												url: `https://evisaforms.state.gov/acs/default.asp?postcode=${embassyCode}&appcode=1`,
+											},
+										],
+									],
+								}),
+							}
+						);
+					} else {
+						const {
+							result: { message_id, reply_markup },
+						} = sentMessageForEmbassy;
+						sentMessageForEmbassyText += `, and _*${monthName}*_`;
+						sentMessageForEmbassy = await bot.editMessageText(
+							CHANNEL_ID,
+							message_id,
+							sentMessageForEmbassyText,
+							{
+								parse_mode: 'MarkdownV2',
+								reply_markup: JSON.stringify(reply_markup),
+							}
+						);
+					}
+				} else if (!bookable) {
 					debug(
-						`No booking at ${embassy} in ${monthName}. Moving on...`
+						`No booking at ${embassy} in ${monthName}. Moving on to next embassy.`
 					);
 					break;
 				}
 			}
 		}
 
-		if (Object.keys(availability).length !== 0) {
-			debug('Sending message...');
-			await bot.sendMessage(CHANNEL_ID, formatMessage(availability), {
-				parse_mode: 'MarkdownV2',
-			});
+		if (sentAvailableMessage) {
 			updateLastMessageTime();
 		} else if (shouldUpdate()) {
-			debug('Sending message...');
 			await bot.sendMessage(
 				CHANNEL_ID,
 				`No appointments were available in the last ${MAX_SILENCE_PERIOD_HRS} hours.`,
@@ -138,18 +175,6 @@ async function getMonthHtml(month, year, embassyCode) {
 		year,
 		embassyCode
 	);
-}
-
-function formatMessage(availability) {
-	let message = '🎉 *Appointments available\\!* 🎉';
-	for (const embassyCode in availability) {
-		message += `\n\nAt the [${
-			EMBASSIES[embassyCode]
-		} Branch](https://evisaforms.state.gov/acs/default.asp?postcode=${embassyCode}&appcode=1) in ${availability[
-			embassyCode
-		].join(', ')}`;
-	}
-	return message;
 }
 
 async function retrieveCache() {
