@@ -4,11 +4,17 @@ Description: Jerusalem Embassy Appointments Telegram SAM template
 
 Parameters:
   BotToken:
-    Description: "Telegram bot token"
-    Type: "String"
+    Description: Telegram bot token
+    Type: String
   ChannelId:
-    Description: "ID of the channel to post to"
-    Type: "String"
+    Description: ID of the channel to post to
+    Type: String
+  StopAtNonBookableMonth:
+    Description: >
+      Option setting whether the bot should stop checking at a
+      particular embassy when a month with no bookable dates is
+      encountered.
+    Type: String
 
 Resources:
   Lambda:
@@ -22,6 +28,7 @@ Resources:
         Variables:
           BOT_TOKEN: !Ref BotToken
           CHANNEL_ID: !Ref ChannelId
+          STOP_AT_NON_BOOKABLE_MONTH: !Ref StopAtNonBookableMonth
           DYNAMODB_TABLE: !Ref Table
           DEBUG: lambda
           DEBUG_HIDE_DATE: true

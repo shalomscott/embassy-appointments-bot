@@ -6,7 +6,7 @@ const { requestSessionCookie, requestMonthHtml } = require('./requests');
 const { AvailabilityParser } = require('./parser');
 const { getCache, updateCache } = require('./cache');
 
-const { BOT_TOKEN, CHANNEL_ID } = process.env;
+const { BOT_TOKEN, CHANNEL_ID, STOP_AT_NON_BOOKABLE_MONTH } = process.env;
 
 const MAX_SILENCE_PERIOD_HRS = 24;
 const MAX_SILENCE_PERIOD = MAX_SILENCE_PERIOD_HRS * 60 * 60 * 1000;
@@ -117,7 +117,7 @@ module.exports.handler = async () => {
 							}
 						);
 					}
-				} else if (!bookable) {
+				} else if (!bookable && STOP_AT_NON_BOOKABLE_MONTH === 'true') {
 					debug(
 						`No booking at ${embassy} in ${monthName}. Moving on to next embassy.`
 					);
