@@ -8,8 +8,10 @@ const { getCache, updateCache } = require('./cache');
 
 const { BOT_TOKEN, CHANNEL_ID, STOP_AT_NON_BOOKABLE_MONTH } = process.env;
 
+const MONTHS_SEARCH_COUNT = 4;
+const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SILENCE_PERIOD_HRS = 24;
-const MAX_SILENCE_PERIOD = MAX_SILENCE_PERIOD_HRS * 60 * 60 * 1000;
+const MAX_SILENCE_PERIOD = MAX_SILENCE_PERIOD_HRS * ONE_HOUR;
 
 const MONTHS = [
 	'January',
@@ -32,10 +34,10 @@ const EMBASSIES = {
 };
 
 const INSTANCE_ID = '1';
-let cacheStale = false;
 
 // Cached variables
 let lastMessageTime = 0;
+let lastRunTime = 0;
 let sessions = {};
 
 const parser = new AvailabilityParser();
@@ -44,8 +46,8 @@ const bot = new Slimbot(BOT_TOKEN);
 module.exports.handler = async () => {
 	try {
 		const now = new Date();
-		const month = now.getMonth();
-		const year = now.getFullYear();
+		const month = now.getUTCMonth();
+		const year = now.getUTCFullYear();
 
 		await retrieveCache();
 
@@ -55,11 +57,11 @@ module.exports.handler = async () => {
 			let sentMessageForEmbassy = null;
 			let sentMessageForEmbassyText = '';
 
-			const embassy = EMBASSIES[embassyCode];
+			const embassyName = EMBASSIES[embassyCode];
 
-			debug(`Checking at ${embassy} branch...`);
+			debug(`Checking at ${embassyName} branch...`);
 
-			for (let i = 0; i < 4; ++i) {
+			for (let i = 0; i < MONTHS_SEARCH_COUNT; ++i) {
 				const m = (month + i) % 12;
 				const y = year + Math.floor((month + i) / 12);
 				const monthName = MONTHS[m];
@@ -70,7 +72,7 @@ module.exports.handler = async () => {
 				const { available, bookable } = parser.parseMonth(monthHtml);
 				if (available) {
 					debug(
-						`Appointments available at ${embassy} in ${monthName}`
+						`Appointments available at ${embassyName} in ${monthName}`
 					);
 
 					if (!sentAvailableMessage) {
@@ -84,7 +86,7 @@ module.exports.handler = async () => {
 						sentAvailableMessage = true;
 					}
 					if (!sentMessageForEmbassy) {
-						sentMessageForEmbassyText = `At the *${embassy} Branch* in _*${monthName}*_`;
+						sentMessageForEmbassyText = `At the *${embassyName} Branch*:\n  • _${monthName}_`;
 						sentMessageForEmbassy = await bot.sendMessage(
 							CHANNEL_ID,
 							sentMessageForEmbassyText,
@@ -94,7 +96,7 @@ module.exports.handler = async () => {
 									inline_keyboard: [
 										[
 											{
-												text: `👉 Go to ${embassy} Branch`,
+												text: `👉 Go to ${embassyName} Branch`,
 												url: `https://evisaforms.state.gov/acs/default.asp?postcode=${embassyCode}&appcode=1`,
 											},
 										],
@@ -106,7 +108,7 @@ module.exports.handler = async () => {
 						const {
 							result: { message_id, reply_markup },
 						} = sentMessageForEmbassy;
-						sentMessageForEmbassyText += `, and _*${monthName}*_`;
+						sentMessageForEmbassyText += `\n  • _${monthName}_`;
 						sentMessageForEmbassy = await bot.editMessageText(
 							CHANNEL_ID,
 							message_id,
@@ -119,7 +121,7 @@ module.exports.handler = async () => {
 					}
 				} else if (!bookable && STOP_AT_NON_BOOKABLE_MONTH === 'true') {
 					debug(
-						`No booking at ${embassy} in ${monthName}. Moving on to next embassy.`
+						`No booking at ${embassyName} in ${monthName}. Moving on to next embassy.`
 					);
 					break;
 				}
@@ -148,7 +150,14 @@ module.exports.handler = async () => {
 			updateLastMessageTime();
 		}
 	} finally {
-		await ensureCache();
+		updateLastRunTime();
+
+		await updateCache(INSTANCE_ID, {
+			lastMessageTime,
+			lastRunTime,
+			sessions,
+		});
+
 		debug('Done.');
 	}
 };
@@ -168,7 +177,6 @@ async function getMonthHtml(month, year, embassyCode) {
 	}
 	debug('Requesting new session key');
 	sessions[embassyCode] = await requestSessionCookie(embassyCode);
-	cacheStale = true;
 	return await requestMonthHtml(
 		sessions[embassyCode],
 		month,
@@ -178,30 +186,22 @@ async function getMonthHtml(month, year, embassyCode) {
 }
 
 async function retrieveCache() {
-	if (lastMessageTime === 0) {
+	if (lastRunTime === 0) {
 		debug('Need to fetch cache');
 		const cache = await getCache(INSTANCE_ID);
 		if (cache) {
 			lastMessageTime = cache.lastMessageTime;
+			lastRunTime = cache.lastRunTime;
 			sessions = cache.sessions;
 		}
 	}
 }
 
-async function ensureCache() {
-	if (cacheStale) {
-		debug('Need to update cache');
-		await updateCache(INSTANCE_ID, {
-			lastMessageTime,
-			sessions,
-		});
-		cacheStale = false;
-	}
-}
-
 function shouldUpdate() {
 	const now = Date.now();
-	if (now - lastMessageTime >= MAX_SILENCE_PERIOD) {
+	if (now - lastRunTime >= ONE_HOUR) {
+		updateLastMessageTime(); // reset this since the gap was due to scheduling
+	} else if (now - lastMessageTime >= MAX_SILENCE_PERIOD) {
 		debug('Max silence period has elapsed');
 		return true;
 	}
@@ -210,5 +210,8 @@ function shouldUpdate() {
 
 function updateLastMessageTime() {
 	lastMessageTime = Date.now();
-	cacheStale = true;
+}
+
+function updateLastRunTime() {
+	lastRunTime = Date.now();
 }
