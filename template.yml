@@ -23,7 +23,7 @@ Resources:
       CodeUri: .
       Handler: lambda.handler
       Runtime: nodejs12.x
-      Timeout: 30
+      Timeout: 45
       Environment:
         Variables:
           BOT_TOKEN: !Ref BotToken
