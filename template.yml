@@ -39,7 +39,7 @@ Resources:
         Trigger:
           Type: Schedule
           Properties:
-            Schedule: "rate(5 minutes)"
+            Schedule: "cron(0/5 * ? * MON-FRI *)"
   Table:
     Type: AWS::Serverless::SimpleTable
     Properties:
