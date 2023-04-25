@@ -1,12 +1,12 @@
 'use strict';
 
-const debug = require('debug')('lambda');
+const debug = require('debug')('app');
 const Slimbot = require('slimbot');
 const { requestSessionCookie, requestMonthHtml } = require('./requests');
 const { AvailabilityParser } = require('./parser');
-const { getCache, updateCache } = require('./cache');
+const { getCacheHandler } = require('./cache');
 
-const { BOT_TOKEN, CHANNEL_ID, STOP_AT_NON_BOOKABLE_MONTH } = process.env;
+const { MODE, BOT_TOKEN, CHANNEL_ID, STOP_AT_NON_BOOKABLE_MONTH } = process.env;
 
 const MONTHS_SEARCH_COUNT = 4;
 const ONE_HOUR = 60 * 60 * 1000;
@@ -33,8 +33,6 @@ const EMBASSIES = {
 	TLV: 'Tel Aviv',
 };
 
-const INSTANCE_ID = '1';
-
 // Cached variables
 let lastMessageTime = 0;
 let lastRunTime = 0;
@@ -43,7 +41,7 @@ let sessions = {};
 const parser = new AvailabilityParser();
 const bot = new Slimbot(BOT_TOKEN);
 
-module.exports.handler = async () => {
+async function main() {
 	try {
 		const now = new Date();
 		const month = now.getUTCMonth();
@@ -152,7 +150,7 @@ module.exports.handler = async () => {
 	} finally {
 		updateLastRunTime();
 
-		await updateCache(INSTANCE_ID, {
+		await getCacheHandler(MODE).updateCache({
 			lastMessageTime,
 			lastRunTime,
 			sessions,
@@ -160,7 +158,7 @@ module.exports.handler = async () => {
 
 		debug('Done.');
 	}
-};
+}
 
 async function getMonthHtml(month, year, embassyCode) {
 	if (sessions[embassyCode]) {
@@ -188,7 +186,7 @@ async function getMonthHtml(month, year, embassyCode) {
 async function retrieveCache() {
 	if (lastRunTime === 0) {
 		debug('Need to fetch cache');
-		const cache = await getCache(INSTANCE_ID);
+		const cache = await getCacheHandler(MODE).getCache();
 		if (cache) {
 			lastMessageTime = cache.lastMessageTime;
 			lastRunTime = cache.lastRunTime;
@@ -215,3 +213,5 @@ function updateLastMessageTime() {
 function updateLastRunTime() {
 	lastRunTime = Date.now();
 }
+
+module.exports = { main };

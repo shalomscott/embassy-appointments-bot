@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "./scripts/deploy-dev.sh",
-    "deploy": "./scripts/deploy.sh"
+    "deploy": "./scripts/deploy.sh",
+    "run-local": "node --require dotenv/config -e \"require('./app.js').main()\"",
+    "repl": "node --require dotenv/config -i -e \"$(< app.js)\""
   },
   "devDependencies": {
     "@types/node-fetch": "^2.5.9",
@@ -11,6 +13,7 @@
   },
   "dependencies": {
     "debug": "^4.3.1",
+    "dotenv": "^16.0.3",
     "htmlparser2": "^6.0.1",
     "node-fetch": "^2.6.1",
     "slimbot": "^5.1.0"

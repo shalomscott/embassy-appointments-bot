@@ -21,16 +21,17 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
-      Handler: lambda.handler
+      Handler: app.main
       Runtime: nodejs12.x
       Timeout: 45
       Environment:
         Variables:
+          MODE: aws
           BOT_TOKEN: !Ref BotToken
           CHANNEL_ID: !Ref ChannelId
           STOP_AT_NON_BOOKABLE_MONTH: !Ref StopAtNonBookableMonth
           DYNAMODB_TABLE: !Ref Table
-          DEBUG: lambda
+          DEBUG: "*"
           DEBUG_HIDE_DATE: true
       Policies:
         - DynamoDBCrudPolicy:

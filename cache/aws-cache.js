@@ -3,15 +3,16 @@ const AWS = require('aws-sdk');
 
 const docClient = new AWS.DynamoDB.DocumentClient();
 
+const INSTANCE_ID = '1';
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
 /** @returns {Promise<any>} */
-function getCache(instanceId) {
+function getCache() {
 	debug('Fetching cache from DynamoDB...');
 	return docClient
 		.get({
 			TableName: DYNAMODB_TABLE,
-			Key: { InstanceId: instanceId },
+			Key: { InstanceId: INSTANCE_ID },
 		})
 		.promise()
 		.then(({ Item }) => {
@@ -26,12 +27,12 @@ function getCache(instanceId) {
 }
 
 /** @returns {Promise<void>} */
-function updateCache(instanceId, cache) {
+function updateCache(cache) {
 	debug('Updating cache:', cache);
 	return docClient
 		.put({
 			TableName: DYNAMODB_TABLE,
-			Item: { InstanceId: instanceId, ...cache },
+			Item: { InstanceId: INSTANCE_ID, ...cache },
 		})
 		.promise()
 		.then(() => debug('Cache updated'));
