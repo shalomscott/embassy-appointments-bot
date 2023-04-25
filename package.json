@@ -4,6 +4,8 @@
   "scripts": {
     "dev": "./scripts/deploy-dev.sh",
     "deploy": "./scripts/deploy.sh",
+    "deploy-local": "./scripts/deploy-local.sh",
+    "undeploy-local": "./scripts/deploy-local.sh remove",
     "run-local": "node --require dotenv/config -e \"require('./app.js').main()\"",
     "repl": "node --require dotenv/config -i -e \"$(< app.js)\""
   },
